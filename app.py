@@ -1,7 +1,8 @@
 import os
 import json
 import threading
-from flask import Flask
+import requests
+from flask import Flask, request, Response
 from zyndai_agent.agent import AgentConfig, ZyndAIAgent
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_classic.agents import AgentExecutor, create_tool_calling_agent
@@ -16,13 +17,24 @@ if private_key:
         json.dump({"private_key": private_key}, f)
     os.environ["ZYND_AGENT_KEYPAIR_PATH"] = key_path
 
-# 2. FLASK FOR RENDER HEALTH CHECK
+# 2. FLASK SERVER + PROXY
 app = Flask(__name__)
 
 
 @app.route('/')
 def health():
-    return "OK", 200
+    return "OK - Sentinel-OSINT is Live", 200
+
+
+# This "Proxy" route sends traffic from Render's public port to the Agent's internal port
+@app.route('/a2a/v1', methods=['POST'])
+def proxy_to_agent():
+    try:
+        # Forward the request to the internal agent port (5001)
+        resp = requests.post('http://127.0.0.1:5001/a2a/v1', json=request.get_json())
+        return Response(resp.content, resp.status_code, resp.headers.items())
+    except Exception as e:
+        return {"error": f"Agent bridge failed: {str(e)}"}, 500
 
 
 # 3. ZYND AGENT SETUP
@@ -41,8 +53,8 @@ def run_agent():
         name="osint-investigator",
         description="Autonomous OSINT Analyzer",
         category="security",
-        webhook_host="0.0.0.0",
-        webhook_port=5001,  # Agent runs on 5001
+        webhook_host="127.0.0.1",
+        webhook_port=5001,  # Agent listening internally
         registry_url="https://zns01.zynd.ai",
         auto_reconnect=True
     )
@@ -52,8 +64,6 @@ def run_agent():
 
 
 if __name__ == "__main__":
-    # Start Agent in background
     threading.Thread(target=run_agent, daemon=True).start()
-    # Start Flask on Render's port
     port = int(os.environ.get("PORT", 10000))
     app.run(host='0.0.0.0', port=port)
