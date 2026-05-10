@@ -9,7 +9,7 @@ from langchain_tavily import TavilySearch
 load_dotenv()
 
 # 1. Setup Gemini + Tools
-llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash", temperature=0.2)
+llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash", temperature=0.2)
 tools = [TavilySearch(max_results=3)]
 
 prompt = ChatPromptTemplate.from_messages([
