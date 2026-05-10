@@ -1,0 +1,18 @@
+# Python environment
+venv/
+__pycache__/
+*.pyc
+
+# Local Credentials & Identity (CRITICAL)
+*.json
+.env
+
+# Local utility scripts
+generator_key.py
+force.py
+testagent.py
+
+# OS / IDE files
+.idea/
+.vscode/
+bin/

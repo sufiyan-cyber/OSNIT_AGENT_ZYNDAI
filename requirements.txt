@@ -1,0 +1,5 @@
+zyndai-agent
+langchain-google-genai
+langchain-community
+langchain-tavily
+python-dotenv
