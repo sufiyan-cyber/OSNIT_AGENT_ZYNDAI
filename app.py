@@ -54,5 +54,11 @@ config = AgentConfig(
 zynd_agent = ZyndAIAgent(config)
 zynd_agent.set_langchain_agent(executor)
 
+# --- ADD THIS PART TO PASS RENDER HEALTH CHECK ---
+@zynd_agent.webhook_app.route('/')
+def health_check():
+    return "Agent is Online", 200
+# ------------------------------------------------
+
 print(f"🚀 OSINT Agent booting on port {port}...")
 zynd_agent.start()
