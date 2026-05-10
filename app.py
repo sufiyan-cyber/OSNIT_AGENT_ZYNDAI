@@ -9,12 +9,25 @@ from langchain_tavily import TavilySearch
 
 load_dotenv()
 
-# 1. Setup Gemini + Tools
-llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash", temperature=0.2)
+# 1. THE RENDER KEY FIX (Nuclear Option)
+private_key = os.environ.get("ZYND_AGENT_PRIVATE_KEY")
+key_path = os.path.abspath("agent_keypair.json")
+
+if private_key:
+    # Create the actual JSON file the SDK expects
+    with open(key_path, "w") as f:
+        json.dump({"private_key": private_key}, f)
+
+    # FORCE the environment variable so the SDK finds it globally
+    os.environ["ZYND_AGENT_KEYPAIR_PATH"] = key_path
+    print(f"✅ Keypair forced to environment at: {key_path}")
+
+# 2. Setup Gemini + Tools
+llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash", temperature=0.2)
 tools = [TavilySearch(max_results=3)]
 
 prompt = ChatPromptTemplate.from_messages([
-    ("system", "You are an elite Autonomous OSINT Investigator. Analyze inputs for security threats."),
+    ("system", "You are an elite Autonomous OSINT Investigator."),
     MessagesPlaceholder("chat_history"),
     ("human", "{input}"),
     MessagesPlaceholder("agent_scratchpad"),
@@ -22,19 +35,10 @@ prompt = ChatPromptTemplate.from_messages([
 
 executor = AgentExecutor(agent=create_tool_calling_agent(llm, tools, prompt), tools=tools)
 
-# 2. THE RENDER KEY FIX
-# We create the file locally in the cloud so the SDK finds it
-private_key = os.environ.get("ZYND_AGENT_PRIVATE_KEY")
-key_path = os.path.join(os.getcwd(), "agent_keypair.json")
-
-if private_key:
-    with open(key_path, "w") as f:
-        json.dump({"private_key": private_key}, f)
-    print(f"✅ Keypair file generated at {key_path}")
-
-# 3. Configuration
+# 3. Port Configuration
 port = int(os.environ.get("PORT", 5000))
 
+# We leave keypair out of AgentConfig because we forced the ENV variable above
 config = AgentConfig(
     name="osint-investigator",
     description="Autonomous OSINT Analyzer",
@@ -43,8 +47,7 @@ config = AgentConfig(
     webhook_host="0.0.0.0",
     webhook_port=port,
     registry_url="https://zns01.zynd.ai",
-    auto_reconnect=True,
-    keypair_path=key_path # <--- This tells the SDK exactly where to look
+    auto_reconnect=True
 )
 
 # 4. Initialize
